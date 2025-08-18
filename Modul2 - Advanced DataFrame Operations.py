@@ -5,12 +5,13 @@
 # MAGIC Dieses Notebook deckt die folgenden Themen ab :
 # MAGIC
 # MAGIC 1. Datenexploration & Filterung
-# MAGIC 2. Transformationen: Select, WithColumn, Ausdrücke
-# MAGIC 3. Gruppierungen & Aggregationen
-# MAGIC 4. Einführung in UDFs (Benutzerdefinierte Funktionen)
-# MAGIC 5. UDF mit mehreren Spalten
-# MAGIC 6. Performance-Hinweise und Best Practices für UDFs
-# MAGIC 7. Pandas_UDFs (Benutzerdefinierte Funktionen)
+# MAGIC 2. Joins
+# MAGIC 3. Transformationen: Select, WithColumn, Ausdrücke
+# MAGIC 4. Gruppierungen & Aggregationen
+# MAGIC 5. Einführung in UDFs (Benutzerdefinierte Funktionen)
+# MAGIC 6. UDF mit mehreren Spalten
+# MAGIC 7. Performance-Hinweise und Best Practices für UDFs
+# MAGIC 8. Pandas_UDFs (Benutzerdefinierte Funktionen)
 
 # COMMAND ----------
 
@@ -62,7 +63,130 @@ display(long_trips)
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## 2.3. Transformationen: Select, WithColumn, Ausdrücke
+# MAGIC ## 2.3. Datenexploration & Filterung
+
+# COMMAND ----------
+
+# Modul 2: Fortgeschrittene DataFrame-Operationen
+# Kapitel: Joins - Grundlegende Einführung
+
+# --------------------------------------
+# Setup
+# --------------------------------------
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import col, dayofweek
+
+spark = SparkSession.builder \
+    .appName("NYC Yellow Taxi - Joins") \
+    .getOrCreate()
+
+# Dataset laden (angepasster Pfad je nach Umgebung)
+taxi_df = spark.read.option("header", True).parquet("/data/yellow_tripdata_2025_01.parquet")
+
+# Beispiel: kleine Tabelle mit NYC Borough Zuordnung
+borough_data = [
+    (1, "Manhattan"),
+    (2, "Bronx"),
+    (3, "Brooklyn"),
+    (4, "Queens"),
+    (5, "Staten Island")
+]
+borough_df = spark.createDataFrame(borough_data, ["LocationID", "Borough"])
+
+# Annahme: taxi_df hat Pickup- und Dropoff-IDs
+
+# --------------------------------------
+# 1. Inner Join
+# --------------------------------------
+# Nur Fahrten, die eine passende Borough-Zuordnung haben
+inner_join_df = taxi_df.join(
+    borough_df,
+    taxi_df["PULocationID"] == borough_df["LocationID"],
+    "inner"
+).select("*", col("Borough").alias("Pickup_Borough"))
+
+# --------------------------------------
+# 2. Left Join
+# --------------------------------------
+# Alle Fahrten behalten, auch wenn keine Borough-Zuordnung existiert
+left_join_df = taxi_df.join(
+    borough_df,
+    taxi_df["PULocationID"] == borough_df["LocationID"],
+    "left"
+).select("*", col("Borough").alias("Pickup_Borough"))
+
+# --------------------------------------
+# 3. Right Join
+# --------------------------------------
+# Alle Boroughs behalten, auch wenn keine Fahrten existieren
+right_join_df = taxi_df.join(
+    borough_df,
+    taxi_df["PULocationID"] == borough_df["LocationID"],
+    "right"
+).select("*", col("Borough").alias("Pickup_Borough"))
+
+# --------------------------------------
+# 4. Full Outer Join
+# --------------------------------------
+# Alle Fahrten und alle Boroughs behalten
+full_outer_join_df = taxi_df.join(
+    borough_df,
+    taxi_df["PULocationID"] == borough_df["LocationID"],
+    "outer"
+).select("*", col("Borough").alias("Pickup_Borough"))
+
+# --------------------------------------
+# 5. Semi-Join
+# --------------------------------------
+semi_join_df = taxi_df.join(
+    borough_df,
+    taxi_df["PULocationID"] == borough_df["LocationID"],
+    "left_semi"
+)
+
+# --------------------------------------
+# 6. Anti-Join
+# --------------------------------------
+anti_join_df = taxi_df.join(
+    borough_df,
+    taxi_df["PULocationID"] == borough_df["LocationID"],
+    "left_anti"
+)
+
+# --------------------------------------
+# 7. Cross-Join
+# --------------------------------------
+weekday_df = taxi_df.select(dayofweek("tpep_pickup_datetime").alias("weekday")).distinct()
+cross_join_df = borough_df.crossJoin(weekday_df)
+
+# --------------------------------------
+# Ergebnisse inspizieren
+# --------------------------------------
+print("Inner Join Beispiel:")
+inner_join_df.show(5)
+
+print("Left Join Beispiel:")
+left_join_df.show(5)
+
+print("Right Join Beispiel:")
+right_join_df.show(5)
+
+print("Full Outer Join Beispiel:")
+full_outer_join_df.show(5)
+
+print("Semi-Join Beispiel:")
+semi_join_df.show(5)
+
+print("Anti-Join Beispiel:")
+anti_join_df.show(5)
+
+print("Cross-Join Beispiel:")
+cross_join_df.show(10)
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## 2.4. Transformationen: Select, WithColumn, Ausdrücke
 
 # COMMAND ----------
 
@@ -82,7 +206,7 @@ display(df_transformed)
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## 2.4. Gruppierungen & Aggregationen
+# MAGIC ## 2.5. Gruppierungen & Aggregationen
 
 # COMMAND ----------
 
@@ -103,7 +227,7 @@ display(df_gruppiert)
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## 2.5. Einführung in UDFs (Benutzerdefinierte Funktionen)
+# MAGIC ## 2.6. Einführung in UDFs (Benutzerdefinierte Funktionen)
 
 # COMMAND ----------
 
@@ -131,7 +255,7 @@ display(df_mit_kategorie.select("trip_distance", "fahrt_kategorie"))
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## 2.6. UDF mit mehreren Spalten
+# MAGIC ## 2.7. UDF mit mehreren Spalten
 
 # COMMAND ----------
 
@@ -158,7 +282,7 @@ display(df_verdaechtig)
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## 2.7. Performance-Hinweise und Best Practices für UDFs
+# MAGIC ## 2.8. Performance-Hinweise und Best Practices für UDFs
 # MAGIC
 
 # COMMAND ----------
@@ -205,7 +329,7 @@ display(df_verdaechtig)
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## 2.8. Pandas_UDFs (Benutzerdefinierte Funktionen)
+# MAGIC ## 2.9. Pandas_UDFs (Benutzerdefinierte Funktionen)
 
 # COMMAND ----------
 

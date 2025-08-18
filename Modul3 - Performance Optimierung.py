@@ -32,8 +32,7 @@ import time
 spark.conf.set("spark.sql.shuffle.partitions", "200")
 
 DATA_PATH = "workspace.default.yellow_tripdata_2025_01"
-
-#LOOKUP_PATH = "/FileStore/tables/taxi_zone_lookup.csv"
+LOOKUP_PATH = "workspace.default.taxi_zone_lookup"
 #WORK_BASE = "Workspace:/Users/michael.legenstein@accenture.com/thesparkindatabricks/tmp/nyc_perf_modul3"
 #dbutils.fs.mkdirs(WORK_BASE)
 
@@ -47,7 +46,7 @@ print("Spark Version:", spark.version)
 
 # COMMAND ----------
 
-dbutils.fs.ls(DATA_PATH)
+print(os.listdir('file:'))
 
 # COMMAND ----------
 
@@ -59,7 +58,7 @@ dbutils.fs.ls(DATA_PATH)
 
 # COMMAND ----------
 
-df = spark.read.parquet(DATA_PATH)
+df = spark.read.table(DATA_PATH)
 
 # Mehrere Transformationen – noch keine Ausführung
 df_long = df.filter(col("trip_distance") > 5).select("PULocationID", "DOLocationID", "trip_distance")
@@ -148,27 +147,44 @@ df_pruned.select("trip_distance").explain("formatted")
 
 # COMMAND ----------
 
+from time import time
+
 # Künstlichen Skew-Key erzeugen: 70% der Zeilen auf einen einzigen Key
-skew_df = df.select("PULocationID", "trip_distance")     .withColumn("hot", when(rand() < 0.7, lit(1)).otherwise(lit(0)))     .withColumn("join_key", when(col("hot")==1, lit(999)).otherwise(col("PULocationID")))
+skew_df = df.select("PULocationID", "trip_distance")\
+            .withColumn("hot", when(rand() < 0.7, lit(1)).otherwise(lit(0)))\
+            .withColumn("join_key", when(col("hot")==1, lit(999)).otherwise(col("PULocationID")))
+skew_df = skew_df.unionAll(skew_df).unionAll(skew_df).unionAll(skew_df)
 
 # Eine kleine Dimensionstabelle zum Join (distinct Keys)
 dim = df.select(col("PULocationID").alias("join_key")).distinct()         .withColumn("factor", lit(1.23))
 
 # --- Schlechter (skewed) Join
 joined_skew = skew_df.join(dim, on="join_key", how="inner")
-print("Skewed Join Plan:")
-joined_skew.explain("formatted")
+#print("Skewed Join Plan:")
+#joined_skew.explain("formatted")
+
+# --- Skewed Join (ohne Salting)
+start = time()
+skew_count = joined_skew.count()   # Aktion -> Job wird wirklich ausgeführt
+end = time()
+print(f"Skewed Join Count: {skew_count}, Dauer: {end - start:.2f} Sekunden")
 
 # --- Salting (verteilt Hot-Key auf 10 'Eimer')
 salt_buckets = 10
 skew_salted = skew_df.withColumn("salt", (rand()*salt_buckets).cast("int"))
+#skew_salted.show()
+
 dim_salted = dim.crossJoin(spark.range(salt_buckets).withColumnRenamed("id","salt"))
+#dim_salted.show()
 
 joined_salted = skew_salted.join(dim_salted, on=["join_key","salt"], how="inner")
-print("\nSalted Join Plan:")
-joined_salted.explain("formatted")
+#print("\nSalted Join Plan:")
+#joined_salted.explain("formatted")
 
-# Hinweis: Für echte Messung die Joins materialisieren und Zeiten vergleichen.
+start = time()
+salted_count = joined_salted.count()
+end = time()
+print(f"Salted Join Count: {salted_count}, Dauer: {end - start:.2f} Sekunden")
 
 # COMMAND ----------
 
@@ -184,7 +200,8 @@ joined_salted.explain("formatted")
 # COMMAND ----------
 
 # Broadcast-Join mit Taxi-Zonen-Lookup
-lookup_df = spark.read.csv(LOOKUP_PATH, header=True, inferSchema=True)                       .withColumnRenamed("LocationID","PULocationID")
+lookup_df = spark.read.table(LOOKUP_PATH)\
+                 .withColumnRenamed("LocationID","PULocationID")
 df_bcast = df.join(broadcast(lookup_df), on="PULocationID", how="left")
 
 print("Broadcast-Join Plan:")
@@ -218,7 +235,10 @@ print("Gezählte Kurzstrecken (Sample):", acc_short.value)
 # COMMAND ----------
 
 # DataFrame-Variante
-df_dfapi = df.filter((col("trip_distance") > 2) & (col("fare_amount") > 5))              .groupBy("PULocationID").agg(F.avg("trip_distance").alias("avg_dist"))
+df_dfapi = df.filter((col("trip_distance") > 2) & (col("fare_amount") > 5))\
+             .groupBy("PULocationID")\
+             .agg(F.avg("trip_distance")\
+             .alias("avg_dist"))
 
 print("DataFrame-Plan (formatted):")
 df_dfapi.explain("formatted")
