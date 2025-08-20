@@ -20,23 +20,28 @@
 
 # COMMAND ----------
 
+#https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page
+
 # DBFS Pfad
 DATA_PATH = "workspace.default.yellow_tripdata_2025_01" # "/FileStore/tables/yellow_tripdata_2025_01-1.parquet"
+LOOKUP_PATH = "workspace.default.df_lookup"
 
 # DataFrame laden
-df = spark.read.table(DATA_PATH)
+df_taxi = spark.read.table(DATA_PATH)
+df_lookup = spark.read.table(LOOKUP_PATH)
 
 # Schema
-df.printSchema()
+df_taxi.printSchema()
 
 # Sample zeigen
-display(df)
+df_taxi.show(5)
+df_lookup.show(5)
 
 # COMMAND ----------
 
 #dbutils.fs.ls("/Volumes/rdp_atz_rbgooe_landing/training/testdata/")
-#df = spark.read.csv("/Volumes/rdp_atz_rbgooe_landing/training/testdata/testfile.csv")
-#df.printSchema()
+#df_taxi = spark.read.csv("/Volumes/rdp_atz_rbgooe_landing/training/testdata/testfile.csv")
+#df_taxi.printSchema()
 
 # COMMAND ----------
 
@@ -46,142 +51,117 @@ display(df)
 # COMMAND ----------
 
 # Row Count
-df.count()
+df_taxi.count()
 
 # Statistik
-#df.describe().show()
-df.describe("trip_distance").show()
+#df_taxi.describe().show()
+df_taxi.describe("trip_distance").show()
 
 # Filter 
-long_trips = df.filter(df.trip_distance > 10)
-short_long_trips = df.filter((df.trip_distance > 10) | (df.trip_distance < 1))
+long_trips = df_taxi.filter(df_taxi.trip_distance > 10)
+short_long_trips = df_taxi.filter((df_taxi.trip_distance > 10) | (df_taxi.trip_distance < 1))
 
-display(long_trips)
-
+long_trips.show()
 
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## 2.3. Datenexploration & Filterung
+# MAGIC ## 2.3. Joins
 
 # COMMAND ----------
 
-# Modul 2: Fortgeschrittene DataFrame-Operationen
-# Kapitel: Joins - Grundlegende Einführung
 
-# --------------------------------------
-# Setup
-# --------------------------------------
-from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, dayofweek
-
-spark = SparkSession.builder \
-    .appName("NYC Yellow Taxi - Joins") \
-    .getOrCreate()
-
-# Dataset laden (angepasster Pfad je nach Umgebung)
-taxi_df = spark.read.option("header", True).parquet("/data/yellow_tripdata_2025_01.parquet")
-
-# Beispiel: kleine Tabelle mit NYC Borough Zuordnung
-borough_data = [
-    (1, "Manhattan"),
-    (2, "Bronx"),
-    (3, "Brooklyn"),
-    (4, "Queens"),
-    (5, "Staten Island")
-]
-borough_df = spark.createDataFrame(borough_data, ["LocationID", "Borough"])
-
-# Annahme: taxi_df hat Pickup- und Dropoff-IDs
 
 # --------------------------------------
 # 1. Inner Join
 # --------------------------------------
-# Nur Fahrten, die eine passende Borough-Zuordnung haben
-inner_join_df = taxi_df.join(
-    borough_df,
-    taxi_df["PULocationID"] == borough_df["LocationID"],
+# Beispiel: Fahrten mit Borough-Namen aus dem Lookup
+inner_join_df = df_taxi.join(
+    df_lookup,
+    df_taxi["PULocationID"] == df_lookup["LocationID"],
     "inner"
 ).select("*", col("Borough").alias("Pickup_Borough"))
 
 # --------------------------------------
 # 2. Left Join
 # --------------------------------------
-# Alle Fahrten behalten, auch wenn keine Borough-Zuordnung existiert
-left_join_df = taxi_df.join(
-    borough_df,
-    taxi_df["PULocationID"] == borough_df["LocationID"],
+left_join_df = df_taxi.join(
+    df_lookup,
+    df_taxi["PULocationID"] == df_lookup["LocationID"],
     "left"
 ).select("*", col("Borough").alias("Pickup_Borough"))
 
 # --------------------------------------
 # 3. Right Join
 # --------------------------------------
-# Alle Boroughs behalten, auch wenn keine Fahrten existieren
-right_join_df = taxi_df.join(
-    borough_df,
-    taxi_df["PULocationID"] == borough_df["LocationID"],
+right_join_df = df_taxi.join(
+    df_lookup,
+    df_taxi["PULocationID"] == df_lookup["LocationID"],
     "right"
 ).select("*", col("Borough").alias("Pickup_Borough"))
 
 # --------------------------------------
 # 4. Full Outer Join
 # --------------------------------------
-# Alle Fahrten und alle Boroughs behalten
-full_outer_join_df = taxi_df.join(
-    borough_df,
-    taxi_df["PULocationID"] == borough_df["LocationID"],
+full_outer_join_df = df_taxi.join(
+    df_lookup,
+    df_taxi["PULocationID"] == df_lookup["LocationID"],
     "outer"
 ).select("*", col("Borough").alias("Pickup_Borough"))
 
 # --------------------------------------
 # 5. Semi-Join
 # --------------------------------------
-semi_join_df = taxi_df.join(
-    borough_df,
-    taxi_df["PULocationID"] == borough_df["LocationID"],
+semi_join_df = df_taxi.join(
+    df_lookup,
+    df_taxi["PULocationID"] == df_lookup["LocationID"],
     "left_semi"
 )
 
 # --------------------------------------
 # 6. Anti-Join
 # --------------------------------------
-anti_join_df = taxi_df.join(
-    borough_df,
-    taxi_df["PULocationID"] == borough_df["LocationID"],
+anti_join_df = df_taxi.join(
+    df_lookup,
+    df_taxi["PULocationID"] == df_lookup["LocationID"],
     "left_anti"
 )
 
 # --------------------------------------
 # 7. Cross-Join
 # --------------------------------------
-weekday_df = taxi_df.select(dayofweek("tpep_pickup_datetime").alias("weekday")).distinct()
-cross_join_df = borough_df.crossJoin(weekday_df)
+weekday_df = df_taxi.select(dayofweek("tpep_pickup_datetime").alias("weekday")).distinct()
+cross_join_df = df_lookup.crossJoin(weekday_df)
 
 # --------------------------------------
 # Ergebnisse inspizieren
 # --------------------------------------
 print("Inner Join Beispiel:")
-inner_join_df.show(5)
+#print(inner_join_df.summary().toPandas())
+print(inner_join_df.describe().toPandas())
+#inner_join_df.show(15)
 
 print("Left Join Beispiel:")
-left_join_df.show(5)
+#print(inner_join_df.summary().toPandas())
+print(inner_join_df.describe().toPandas())
+#left_join_df.show(15)
 
 print("Right Join Beispiel:")
-right_join_df.show(5)
+#right_join_df.show(15)
 
 print("Full Outer Join Beispiel:")
-full_outer_join_df.show(5)
+#full_outer_join_df.show(15)
 
 print("Semi-Join Beispiel:")
-semi_join_df.show(5)
+#semi_join_df.show(15)
 
 print("Anti-Join Beispiel:")
-anti_join_df.show(5)
+#anti_join_df.show(15)
 
 print("Cross-Join Beispiel:")
-cross_join_df.show(10)
+#cross_join_df.show(15)
 
 # COMMAND ----------
 
@@ -193,7 +173,7 @@ cross_join_df.show(10)
 from pyspark.sql.functions import col, expr
 
 # Auswahl relevanter Spalten und Berechnung der Fahrtdauer
-df_transformed = df.select(
+df_transformed = df_taxi.select(
     "tpep_pickup_datetime",
     "tpep_dropoff_datetime",
     "trip_distance",
@@ -213,7 +193,7 @@ display(df_transformed)
 from pyspark.sql.functions import avg, count
 
 # Durchschnittliche Entfernung und Fahrpreis pro Tag
-df_gruppiert = df.groupBy(expr("date(tpep_pickup_datetime)").alias("fahrt_datum")) \
+df_gruppiert = df_taxi.groupBy(expr("date(tpep_pickup_datetime)").alias("fahrt_datum")) \
     .agg(
         avg("trip_distance").alias("durchschnitt_entfernung"),
         avg("fare_amount").alias("durchschnitt_fahrpreis"),
@@ -247,7 +227,7 @@ def fahrten_kategorie(entfernung):
 kategorie_udf = udf(fahrten_kategorie, StringType())
 
 # UDF anwenden
-df_mit_kategorie = df.withColumn("fahrt_kategorie", kategorie_udf(col("trip_distance")))
+df_mit_kategorie = df_taxi.withColumn("fahrt_kategorie", kategorie_udf(col("trip_distance")))
 
 display(df_mit_kategorie.select("trip_distance", "fahrt_kategorie"))
 
@@ -271,7 +251,7 @@ def verdaechtige_fahrt(fahrpreis, entfernung):
 verdaechtige_udf = udf(verdaechtige_fahrt, BooleanType())
 
 # UDF anwenden
-df_flagged = df.withColumn("verdaechtig", verdaechtige_udf(col("fare_amount"), col("trip_distance")))
+df_flagged = df_taxi.withColumn("verdaechtig", verdaechtige_udf(col("fare_amount"), col("trip_distance")))
 
 # Nur verdächtige Fahrten anzeigen
 df_verdaechtig = df_flagged.filter(col("verdaechtig") == True)
@@ -351,7 +331,7 @@ def fahrten_kategorie_pandas(entfernungen: pd.Series) -> pd.Series:
     return pd.Series(ergebnisse)
 
 # Pandas_UDF anwenden
-df_mit_kategorie = df.withColumn(
+df_mit_kategorie = df_taxi.withColumn(
     "fahrt_kategorie",
     fahrten_kategorie_pandas(col("trip_distance"))
 )

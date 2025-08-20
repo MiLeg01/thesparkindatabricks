@@ -35,12 +35,14 @@ DATA_PATH = "workspace.default.yellow_tripdata_2025_01"
 LOOKUP_PATH = "workspace.default.taxi_zone_lookup"
 #WORK_BASE = "Workspace:/Users/michael.legenstein@accenture.com/thesparkindatabricks/tmp/nyc_perf_modul3"
 #dbutils.fs.mkdirs(WORK_BASE)
+df_taxi = spark.read.table(DATA_PATH)
+df_lookup = spark.read.table(LOOKUP_PATH)
 
 # Write to local temp
 path = "/tmp/nyc_perf_modul3"
 os.makedirs(f"file:{path}", exist_ok=True)
 
-#df.write.mode("overwrite").parquet(f"file:{path}/data.parquet")
+#df_taxi.write.mode("overwrite").parquet(f"file:{path}/data.parquet")
 
 print("Spark Version:", spark.version)
 
@@ -58,10 +60,8 @@ print(os.listdir('file:'))
 
 # COMMAND ----------
 
-df = spark.read.table(DATA_PATH)
-
 # Mehrere Transformationen – noch keine Ausführung
-df_long = df.filter(col("trip_distance") > 5).select("PULocationID", "DOLocationID", "trip_distance")
+df_long = df_taxi.filter(col("trip_distance") > 5).select("PULocationID", "DOLocationID", "trip_distance")
 
 print("Noch keine Ausführung erfolgt (Lazy). Jetzt explain:")
 df_long.explain("extended")  # zeigt Logical, Optimized, Physical Plan
@@ -81,7 +81,7 @@ print("Zeilen:", n, "  Dauer (s):", round(t1 - t0, 2))
 
 # COMMAND ----------
 
-df_jan = df.filter((col("tpep_pickup_datetime") >= "2016-01-01") & (col("tpep_pickup_datetime") < "2016-02-01"))
+df_jan = df_taxi.filter((col("tpep_pickup_datetime") >= "2016-01-01") & (col("tpep_pickup_datetime") < "2016-02-01"))
 
 # Ohne Cache: zwei aufeinanderfolgende Actions
 t0 = time.time(); _ = df_jan.select("trip_distance").agg(F.avg("trip_distance")).collect(); t1 = time.time()
@@ -109,17 +109,17 @@ df_jan_cached.unpersist()
 
 # COMMAND ----------
 
-print("Aktuelle Anzahl Partitionen:", df.rdd.getNumPartitions())
+print("Aktuelle Anzahl Partitionen:", df_taxi.rdd.getNumPartitions())
 
 # Beispiel Repartition/Coalesce (Demo, nicht zwingend ausführen)
-demo = df.select("tpep_pickup_datetime", "trip_distance")
+demo = df_taxi.select("tpep_pickup_datetime", "trip_distance")
 demo = demo.repartition(64)
 print("Nach repartition(64):", demo.rdd.getNumPartitions())
 demo = demo.coalesce(16)
 print("Nach coalesce(16):", demo.rdd.getNumPartitions())
 
 # Partitioniert schreiben (kleine Teilmenge, um Demo schnell zu halten)
-small = df.withColumn("year", year("tpep_pickup_datetime")).withColumn("month", month("tpep_pickup_datetime"))           .filter((col("year")==2016) & (col("month").isin(1,2)))
+small = df_taxi.withColumn("year", year("tpep_pickup_datetime")).withColumn("month", month("tpep_pickup_datetime"))           .filter((col("year")==2016) & (col("month").isin(1,2)))
 out_path = f"{WORK_BASE}/yellow_partitioned"
 
 # idempotent säubern
@@ -150,13 +150,13 @@ df_pruned.select("trip_distance").explain("formatted")
 from time import time
 
 # Künstlichen Skew-Key erzeugen: 70% der Zeilen auf einen einzigen Key
-skew_df = df.select("PULocationID", "trip_distance")\
+skew_df = df_taxi.select("PULocationID", "trip_distance")\
             .withColumn("hot", when(rand() < 0.7, lit(1)).otherwise(lit(0)))\
             .withColumn("join_key", when(col("hot")==1, lit(999)).otherwise(col("PULocationID")))
 skew_df = skew_df.unionAll(skew_df).unionAll(skew_df).unionAll(skew_df)
 
 # Eine kleine Dimensionstabelle zum Join (distinct Keys)
-dim = df.select(col("PULocationID").alias("join_key")).distinct()         .withColumn("factor", lit(1.23))
+dim = df_taxi.select(col("PULocationID").alias("join_key")).distinct()         .withColumn("factor", lit(1.23))
 
 # --- Schlechter (skewed) Join
 joined_skew = skew_df.join(dim, on="join_key", how="inner")
@@ -202,7 +202,7 @@ print(f"Salted Join Count: {salted_count}, Dauer: {end - start:.2f} Sekunden")
 # Broadcast-Join mit Taxi-Zonen-Lookup
 lookup_df = spark.read.table(LOOKUP_PATH)\
                  .withColumnRenamed("LocationID","PULocationID")
-df_bcast = df.join(broadcast(lookup_df), on="PULocationID", how="left")
+df_bcast = df_taxi.join(broadcast(lookup_df), on="PULocationID", how="left")
 
 print("Broadcast-Join Plan:")
 df_bcast.explain("formatted")
@@ -217,7 +217,7 @@ def count_short(row):
         acc_short += 1
 
 # Achtung: foreach löst Job aus; hier auf kleiner Teilmenge demonstrieren
-df.limit(500000).select("trip_distance").foreach(count_short)
+df_taxi.limit(500000).select("trip_distance").foreach(count_short)
 print("Gezählte Kurzstrecken (Sample):", acc_short.value)
 
 # COMMAND ----------
@@ -235,7 +235,7 @@ print("Gezählte Kurzstrecken (Sample):", acc_short.value)
 # COMMAND ----------
 
 # DataFrame-Variante
-df_dfapi = df.filter((col("trip_distance") > 2) & (col("fare_amount") > 5))\
+df_dfapi = df_taxi.filter((col("trip_distance") > 2) & (col("fare_amount") > 5))\
              .groupBy("PULocationID")\
              .agg(F.avg("trip_distance")\
              .alias("avg_dist"))
@@ -244,8 +244,8 @@ print("DataFrame-Plan (formatted):")
 df_dfapi.explain("formatted")
 
 # SQL-Variante (soll gleichwertigen Plan erzeugen)
-df.createOrReplaceTempView("trips")
-sql_df = spark.sql('''
+df_taxi.createOrReplaceTempView("trips")
+sql_df_taxi = spark.sql('''
   SELECT PULocationID, AVG(trip_distance) AS avg_dist
   FROM trips
   WHERE trip_distance > 2 AND fare_amount > 5
@@ -253,7 +253,7 @@ sql_df = spark.sql('''
 ''')
 
 print("\nSQL-Plan (formatted):")
-sql_df.explain("formatted")
+sql_df_taxi.explain("formatted")
 
 # Codegen anzeigen (Ausschnitt)
 print("\nDataFrame-Plan (codegen):")
