@@ -1,7 +1,10 @@
 # Databricks notebook source
 # MAGIC %md
 # MAGIC # Modul 3: Performance-Optimierung in PySpark
-# MAGIC
+
+# COMMAND ----------
+
+# MAGIC %md
 # MAGIC Dieses Notebook deckt die folgenden Themen ab :
 # MAGIC
 # MAGIC 1. Lazy Evaluation & Ausführungspläne (`explain`)

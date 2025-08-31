@@ -1,7 +1,12 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # **Databricks Training - Modul 2: Advanced DataFrame Operations & UDFs**
+# MAGIC #Modul 2: Advanced DataFrame Operations & UDFs
 # MAGIC
+# MAGIC
+
+# COMMAND ----------
+
+# MAGIC %md
 # MAGIC Dieses Notebook deckt die folgenden Themen ab :
 # MAGIC
 # MAGIC 1. Datenexploration & Filterung
@@ -21,10 +26,12 @@
 # COMMAND ----------
 
 #https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page
+#https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2025-01.parquet
+#https://d37ci6vzurychx.cloudfront.net/misc/taxi_zone_lookup.csv
 
 # DBFS Pfad
 DATA_PATH = "workspace.default.yellow_tripdata_2025_01" # "/FileStore/tables/yellow_tripdata_2025_01-1.parquet"
-LOOKUP_PATH = "workspace.default.df_lookup"
+LOOKUP_PATH = "workspace.default.taxi_zone_lookup"
 
 # DataFrame laden
 df_taxi = spark.read.table(DATA_PATH)
@@ -32,16 +39,12 @@ df_lookup = spark.read.table(LOOKUP_PATH)
 
 # Schema
 df_taxi.printSchema()
+df_lookup.printSchema()
 
 # Sample zeigen
 df_taxi.show(5)
+display(df_taxi.limit(5))
 df_lookup.show(5)
-
-# COMMAND ----------
-
-#dbutils.fs.ls("/Volumes/rdp_atz_rbgooe_landing/training/testdata/")
-#df_taxi = spark.read.csv("/Volumes/rdp_atz_rbgooe_landing/training/testdata/testfile.csv")
-#df_taxi.printSchema()
 
 # COMMAND ----------
 

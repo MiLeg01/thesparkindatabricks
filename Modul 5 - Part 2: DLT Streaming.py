@@ -1,4 +1,20 @@
 # Databricks notebook source
+# MAGIC %md
+# MAGIC %md
+# MAGIC ##Modul 5 - Part 2: DLT Streaming
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC Inhaltsverzeichnis tbd
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC
+
+# COMMAND ----------
+
 """
 # Import modules
 import dlt
