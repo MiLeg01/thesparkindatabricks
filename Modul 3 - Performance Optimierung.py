@@ -29,29 +29,13 @@ from pyspark.sql import functions as F
 from pyspark import StorageLevel
 import time
 
-#spark.conf.set("spark.sql.execution.arrow.enabled", "true")
-
-# Passen Sie die Shuffle-Partitionen an die Clustergröße an
-spark.conf.set("spark.sql.shuffle.partitions", "200")
-
-DATA_PATH = "workspace.default.yellow_tripdata_2025_01"
+# DBFS Pfad
+DATA_PATH = "workspace.default.yellow_tripdata_2025_01" # "/FileStore/tables/yellow_tripdata_2025_01-1.parquet"
 LOOKUP_PATH = "workspace.default.taxi_zone_lookup"
-#WORK_BASE = "Workspace:/Users/michael.legenstein@accenture.com/thesparkindatabricks/tmp/nyc_perf_modul3"
-#dbutils.fs.mkdirs(WORK_BASE)
+
+# DataFrame laden
 df_taxi = spark.read.table(DATA_PATH)
 df_lookup = spark.read.table(LOOKUP_PATH)
-
-# Write to local temp
-path = "/tmp/nyc_perf_modul3"
-os.makedirs(f"file:{path}", exist_ok=True)
-
-#df_taxi.write.mode("overwrite").parquet(f"file:{path}/data.parquet")
-
-print("Spark Version:", spark.version)
-
-# COMMAND ----------
-
-print(os.listdir('file:'))
 
 # COMMAND ----------
 
@@ -64,7 +48,11 @@ print(os.listdir('file:'))
 # COMMAND ----------
 
 # Mehrere Transformationen – noch keine Ausführung
+print("filter():")
+t0 = time.time()
 df_long = df_taxi.filter(col("trip_distance") > 5).select("PULocationID", "DOLocationID", "trip_distance")
+t1 = time.time()
+print("Dauer (s):", round(t1 - t0, 2))
 
 print("Noch keine Ausführung erfolgt (Lazy). Jetzt explain:")
 df_long.explain("extended")  # zeigt Logical, Optimized, Physical Plan
@@ -112,27 +100,64 @@ df_jan_cached.unpersist()
 
 # COMMAND ----------
 
+from pyspark.sql.functions import col
+
+# Aktuelle Partitionen prüfen
 print("Aktuelle Anzahl Partitionen:", df_taxi.rdd.getNumPartitions())
 
-# Beispiel Repartition/Coalesce (Demo, nicht zwingend ausführen)
+# Beispiel Repartition / Coalesce
 demo = df_taxi.select("tpep_pickup_datetime", "trip_distance")
+
+# Auf 64 Partitionen erhöhen
 demo = demo.repartition(64)
 print("Nach repartition(64):", demo.rdd.getNumPartitions())
+
+# Auf 16 Partitionen reduzieren
 demo = demo.coalesce(16)
 print("Nach coalesce(16):", demo.rdd.getNumPartitions())
 
-# Partitioniert schreiben (kleine Teilmenge, um Demo schnell zu halten)
-small = df_taxi.withColumn("year", year("tpep_pickup_datetime")).withColumn("month", month("tpep_pickup_datetime"))           .filter((col("year")==2016) & (col("month").isin(1,2)))
-out_path = f"{WORK_BASE}/yellow_partitioned"
 
-# idempotent säubern
-dbutils.fs.rm(out_path, recurse=True)
-small.write.mode("overwrite").partitionBy("year","month").parquet(out_path)
+# COMMAND ----------
 
-print("Partitioniertes Dataset geschrieben nach:", out_path)
+from pyspark.sql.functions import year, month, col
 
-# Partition Pruning zeigen
-df_part = spark.read.parquet(out_path)
+# Kleine Teilmenge wie vorher
+partitioned_table = (
+    df_taxi
+    .withColumn("year", year("tpep_pickup_datetime"))
+    .withColumn("month", month("tpep_pickup_datetime"))
+    .filter((col("year") == 2025) & (col("month").isin(1, 2)))
+)
+
+# Name der Zieltabelle
+table_name = "yellow_partitioned_taxi"
+
+# Falls die Tabelle schon existiert -> droppen (idempotent)
+spark.sql(f"DROP TABLE IF EXISTS {table_name}")
+
+# Partitioniert in Metastore-Tabelle schreiben
+partitioned_table.write.mode("overwrite").partitionBy("year", "month").saveAsTable(table_name)
+
+print(f"Tabelle geschrieben nach: {table_name}")
+
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC DESCRIBE EXTENDED default.yellow_partitioned_taxi
+# MAGIC
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC SHOW PARTITIONS yellow_partitioned_taxi;
+
+# COMMAND ----------
+
+# Partition Pruning
+
+df_part = spark.table(table_name)
+
 print("Explain ohne Filter:")
 df_part.select("trip_distance").explain("formatted")
 
