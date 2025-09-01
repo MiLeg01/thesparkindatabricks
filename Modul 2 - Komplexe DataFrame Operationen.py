@@ -10,13 +10,14 @@
 # MAGIC Dieses Notebook deckt die folgenden Themen ab :
 # MAGIC
 # MAGIC 1. Datenexploration & Filterung
-# MAGIC 2. Joins
-# MAGIC 3. Transformationen: Select, WithColumn, Ausdrücke
-# MAGIC 4. Gruppierungen & Aggregationen
-# MAGIC 5. Einführung in UDFs (Benutzerdefinierte Funktionen)
-# MAGIC 6. UDF mit mehreren Spalten
-# MAGIC 7. Performance-Hinweise und Best Practices für UDFs
-# MAGIC 8. Pandas_UDFs (Benutzerdefinierte Funktionen)
+# MAGIC 2. Transformationen: Select, WithColumn, Ausdrücke
+# MAGIC 3. Gruppierungen & Aggregationen
+# MAGIC 4. Window Functions
+# MAGIC 5. Joins
+# MAGIC 6. Einführung in UDFs (Benutzerdefinierte Funktionen)
+# MAGIC 7. UDF mit mehreren Spalten
+# MAGIC 8. Performance-Hinweise und Best Practices für UDFs
+# MAGIC 9. Pandas_UDFs (Benutzerdefinierte Funktionen)
 
 # COMMAND ----------
 
@@ -64,13 +65,104 @@ df_taxi.describe("trip_distance").show()
 long_trips = df_taxi.filter(df_taxi.trip_distance > 10)
 short_long_trips = df_taxi.filter((df_taxi.trip_distance > 10) | (df_taxi.trip_distance < 1))
 
-long_trips.show()
+
+# COMMAND ----------
+
+### YOUR CODE HERE ###
+# df_trips.filter( ... ).select( ... ).show(5)
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## 2.3. Transformationen: Select, WithColumn, Ausdrücke
+
+# COMMAND ----------
+
+from pyspark.sql.functions import col, expr
+
+# Auswahl relevanter Spalten und Berechnung der Fahrtdauer
+df_transformed = df_taxi.select(
+    "tpep_pickup_datetime",
+    "tpep_dropoff_datetime",
+    "trip_distance",
+    "fare_amount",
+    expr("unix_timestamp(tpep_dropoff_datetime) - unix_timestamp(tpep_pickup_datetime)").alias("trip_duration_seconds")
+)
+
+display(df_transformed)
+
+# COMMAND ----------
+
+#Berechnung der Durchschnittsgeschwindigkeit
+
+### YOUR CODE HERE ###
+# df_trips = df_trips.withColumn("...", ...)
+# df_trips.select("...", "...").show(5)
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## 2.4. Gruppierungen & Aggregationen
+
+# COMMAND ----------
+
+from pyspark.sql.functions import avg, count
+
+# Durchschnittliche Entfernung und Fahrpreis pro Tag
+df_gruppiert = df_taxi.groupBy(expr("date(tpep_pickup_datetime)").alias("fahrt_datum")) \
+    .agg(
+        avg("trip_distance").alias("durchschnitt_entfernung"),
+        avg("fare_amount").alias("durchschnitt_fahrpreis"),
+        count("*").alias("anzahl_fahrten")
+    ) \
+    .orderBy("fahrt_datum")
+
+display(df_gruppiert)
+
+
+# COMMAND ----------
+
+#Berechnung der obigen Werte auf Monatsbasis
+
+### YOUR CODE HERE ###
+#df_gruppiert_monat = df_gruppiert.groupBy() \
+#    .agg(
+#    ) \
+#    .orderBy("fahrt_datum")
 
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## 2.3. Joins
+# MAGIC ## 2.5. Window Functions
+
+# COMMAND ----------
+
+from pyspark.sql.window import Window
+from pyspark.sql.functions import rank, desc, to_date
+
+w = Window.partitionBy(to_date("tpep_pickup_datetime")).orderBy(desc("trip_distance"))
+
+df_ranked = df_taxi.withColumn("rank", rank().over(w))
+df_ranked.filter(col("rank") <= 3) \
+    .select("tpep_pickup_datetime", "trip_distance", "rank") \
+    .show(10)
+
+
+# COMMAND ----------
+
+#Höchste Rate pro Tag
+
+### YOUR CODE HERE ###
+# w = Window.partitionBy(to_date("...")).orderBy(desc("..."))
+# df_ranked = df_trips.withColumn("rank", rank().over(w))
+# df_ranked.filter(col("rank") <= 3).show(10)
+
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## 2.6. Joins
 
 # COMMAND ----------
 
@@ -169,48 +261,7 @@ print("Cross-Join Beispiel:")
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## 2.4. Transformationen: Select, WithColumn, Ausdrücke
-
-# COMMAND ----------
-
-from pyspark.sql.functions import col, expr
-
-# Auswahl relevanter Spalten und Berechnung der Fahrtdauer
-df_transformed = df_taxi.select(
-    "tpep_pickup_datetime",
-    "tpep_dropoff_datetime",
-    "trip_distance",
-    "fare_amount",
-    expr("unix_timestamp(tpep_dropoff_datetime) - unix_timestamp(tpep_pickup_datetime)").alias("trip_duration_seconds")
-)
-
-display(df_transformed)
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ## 2.5. Gruppierungen & Aggregationen
-
-# COMMAND ----------
-
-from pyspark.sql.functions import avg, count
-
-# Durchschnittliche Entfernung und Fahrpreis pro Tag
-df_gruppiert = df_taxi.groupBy(expr("date(tpep_pickup_datetime)").alias("fahrt_datum")) \
-    .agg(
-        avg("trip_distance").alias("durchschnitt_entfernung"),
-        avg("fare_amount").alias("durchschnitt_fahrpreis"),
-        count("*").alias("anzahl_fahrten")
-    ) \
-    .orderBy("fahrt_datum")
-
-display(df_gruppiert)
-
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ## 2.6. Einführung in UDFs (Benutzerdefinierte Funktionen)
+# MAGIC ## 2.7. Einführung in UDFs (Benutzerdefinierte Funktionen)
 
 # COMMAND ----------
 
@@ -238,7 +289,7 @@ display(df_mit_kategorie.select("trip_distance", "fahrt_kategorie"))
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## 2.7. UDF mit mehreren Spalten
+# MAGIC ## 2.8. UDF mit mehreren Spalten
 
 # COMMAND ----------
 
@@ -265,7 +316,7 @@ display(df_verdaechtig)
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## 2.8. Performance-Hinweise und Best Practices für UDFs
+# MAGIC ## 2.9. Performance-Hinweise und Best Practices für UDFs
 # MAGIC
 
 # COMMAND ----------
@@ -312,7 +363,7 @@ display(df_verdaechtig)
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## 2.9. Pandas_UDFs (Benutzerdefinierte Funktionen)
+# MAGIC ## 2.10. Pandas_UDFs (Benutzerdefinierte Funktionen)
 
 # COMMAND ----------
 
@@ -340,3 +391,35 @@ df_mit_kategorie = df_taxi.withColumn(
 )
 
 df_mit_kategorie.select("trip_distance", "fahrt_kategorie").show()
+
+# COMMAND ----------
+
+from pyspark.sql.functions import pandas_udf, col
+from pyspark.sql.types import StringType
+import pandas as pd
+
+# Schreibe eine Pandas UDF, die aus der tip_amount und der fare_amount eine Trinkgeld-Kategorie bestimmt:
+# "Keine" → wenn tip_amount == 0
+# "Normal" → wenn tip_amount/fare_amount < 0.2
+# "Großzügig" → wenn tip_amount/fare_amount >= 0.2
+
+# 🚀 Definiere hier deine eigene Pandas UDF
+@pandas_udf(StringType())
+def tip_kategorie_pandas(tips: pd.Series, fares: pd.Series) -> pd.Series:
+    ergebnisse = []
+    for t, f in zip(tips, fares):
+        ### YOUR CODE HERE ###
+        # if ...
+        # elif ...
+        # else ...
+        pass
+    return pd.Series(ergebnisse)
+
+# 🚀 Wende deine Pandas UDF auf den DataFrame an
+df_mit_tip_kategorie = df_taxi.withColumn(
+    "tip_kategorie",
+    tip_kategorie_pandas(col("tip_amount"), col("fare_amount"))
+)
+
+df_mit_tip_kategorie.select("fare_amount", "tip_amount", "tip_kategorie").show(10)
+
