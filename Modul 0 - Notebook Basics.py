@@ -1,5 +1,18 @@
 # Databricks notebook source
 # MAGIC %md
+# MAGIC # Menti Umfrage
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC
+# MAGIC https://www.menti.com/aldhq2dr1ua6
+# MAGIC
+# MAGIC ![mentimeter_qr_code.png](./mentimeter_qr_code.png "mentimeter_qr_code.png")
+
+# COMMAND ----------
+
+# MAGIC %md
 # MAGIC
 # MAGIC # Notebook & Databricks Basics
 # MAGIC

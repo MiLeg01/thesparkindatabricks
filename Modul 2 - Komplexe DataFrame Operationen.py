@@ -26,13 +26,18 @@
 
 # COMMAND ----------
 
+# MAGIC %run "./Helper/_config"
+
+# COMMAND ----------
+
+#Das sind die Daten mit denen wir arbeiten + Erklärung:
 #https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page
 #https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2025-01.parquet
 #https://d37ci6vzurychx.cloudfront.net/misc/taxi_zone_lookup.csv
 
-# DBFS Pfad
-DATA_PATH = "workspace.default.yellow_tripdata_2025_01" # "/FileStore/tables/yellow_tripdata_2025_01-1.parquet"
-LOOKUP_PATH = "workspace.default.taxi_zone_lookup"
+# Daten zuerst in DBFS hochladen
+DATA_PATH = f"{CATALOG}.{SCHEMA}.yellow_tripdata_2025_01"
+LOOKUP_PATH = f"{CATALOG}.{SCHEMA}.taxi_zone_lookup"
 
 # DataFrame laden
 df_taxi = spark.read.table(DATA_PATH)
@@ -45,7 +50,9 @@ df_lookup.printSchema()
 # Sample zeigen
 df_taxi.show(5)
 display(df_taxi.limit(5))
+
 df_lookup.show(5)
+display(df_lookup.limit(5))
 
 # COMMAND ----------
 
@@ -141,6 +148,7 @@ display(df_gruppiert)
 from pyspark.sql.window import Window
 from pyspark.sql.functions import rank, desc, to_date
 
+#Pro Tag die drei Fahrten mit der größten trip_distance und zeigt deren Abholzeit, Distanz und Rang an.
 w = Window.partitionBy(to_date("tpep_pickup_datetime")).orderBy(desc("trip_distance"))
 
 df_ranked = df_taxi.withColumn("rank", rank().over(w))
@@ -322,7 +330,7 @@ display(df_verdaechtig)
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### 🧠 Wann soll ich UDFs verwenden?
+# MAGIC ### Wann soll ich UDFs verwenden?
 # MAGIC
 # MAGIC UDFs (User Defined Functions) sind benutzerdefinierte Funktionen, mit denen du komplexe Logik einbauen kannst, die nicht durch Spark-eigene Funktionen abgedeckt wird.
 # MAGIC
@@ -403,7 +411,7 @@ import pandas as pd
 # "Normal" → wenn tip_amount/fare_amount < 0.2
 # "Großzügig" → wenn tip_amount/fare_amount >= 0.2
 
-# 🚀 Definiere hier deine eigene Pandas UDF
+# Definiere hier deine eigene Pandas UDF
 @pandas_udf(StringType())
 def tip_kategorie_pandas(tips: pd.Series, fares: pd.Series) -> pd.Series:
     ergebnisse = []
@@ -415,7 +423,7 @@ def tip_kategorie_pandas(tips: pd.Series, fares: pd.Series) -> pd.Series:
         pass
     return pd.Series(ergebnisse)
 
-# 🚀 Wende deine Pandas UDF auf den DataFrame an
+# Wende deine Pandas UDF auf den DataFrame an
 df_mit_tip_kategorie = df_taxi.withColumn(
     "tip_kategorie",
     tip_kategorie_pandas(col("tip_amount"), col("fare_amount"))
