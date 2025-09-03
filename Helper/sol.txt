@@ -1,0 +1,20 @@
+# --- Delta target path
+delta_path = f"/{streaming_input_folder}/delta_table"
+
+# Create Delta table folder if it doesn't exist
+dbutils.fs.mkdirs(delta_path)
+
+# --- Stream row by row into Delta
+for i, row in enumerate(df_taxi_small.collect()):
+    
+    # Convert row to DataFrame
+    row_df = spark.createDataFrame([row.asDict()])
+    
+    # Write row to Delta in append mode
+    row_df.write.format("delta").mode("append").save(delta_path)
+    
+    print(f"Wrote row {i+1} to Delta")
+    time.sleep(1)  # simulate streaming
+
+# --- Read back to check
+spark.read.format("delta").load(delta_path).show(10, truncate=False)

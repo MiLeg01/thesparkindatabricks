@@ -8,7 +8,7 @@
 # MAGIC
 # MAGIC https://www.menti.com/aldhq2dr1ua6
 # MAGIC
-# MAGIC ![mentimeter_qr_code.png](./mentimeter_qr_code.png "mentimeter_qr_code.png")
+# MAGIC ![](./Helper/mentimeter_qr_code.png)
 
 # COMMAND ----------
 
