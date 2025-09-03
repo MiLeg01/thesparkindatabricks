@@ -6,11 +6,6 @@
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC Inhaltsverzeichnis tbd
-
-# COMMAND ----------
-
-# MAGIC %md
 # MAGIC ## 5.6. DLT Pipeline definiert
 
 # COMMAND ----------
@@ -18,7 +13,8 @@
 import dlt
 from pyspark.sql.functions import avg, count
 
-input_path = "workspace.streaming_input.inputtable"
+#input_path = "workspace.streaming_input.inputtable"
+STREAMING_INPUT_FOLDER = f"/Volumes/{CATALOG}/{SCHEMA}/taxi_volume/jsonfolder"
 
 # Read from your source table
 @dlt.table(
@@ -26,7 +22,11 @@ input_path = "workspace.streaming_input.inputtable"
     comment="Raw streaming trips data"
 )
 def raw_trips():
-    return spark.read.table(input_path)
+    return (
+        spark.readStream
+             .format("json")
+             .load(STREAMING_INPUT_FOLDER)
+    )
 
 # Aggregate trips by passenger_count
 @dlt.table(
