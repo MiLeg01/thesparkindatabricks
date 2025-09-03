@@ -21,6 +21,10 @@
 
 # COMMAND ----------
 
+# MAGIC %run "./Helper/_config"
+
+# COMMAND ----------
+
 # %pip install pyarrow pandas  # In Databricks i.d.R. bereits vorhanden
 import os
 
@@ -30,8 +34,8 @@ from pyspark import StorageLevel
 import time
 
 # DBFS Pfad
-DATA_PATH = "workspace.default.yellow_tripdata_2025_01" # "/FileStore/tables/yellow_tripdata_2025_01-1.parquet"
-LOOKUP_PATH = "workspace.default.taxi_zone_lookup"
+DATA_PATH = f"{CATALOG}.{SCHEMA}.yellow_tripdata_2025_01"
+LOOKUP_PATH =  f"{CATALOG}.{SCHEMA}.taxi_zone_lookup"
 
 # DataFrame laden
 df_taxi = spark.read.table(DATA_PATH)
@@ -72,22 +76,20 @@ print("Zeilen:", n, "  Dauer (s):", round(t1 - t0, 2))
 
 # COMMAND ----------
 
-df_jan = df_taxi.filter((col("tpep_pickup_datetime") >= "2016-01-01") & (col("tpep_pickup_datetime") < "2016-02-01"))
-
 # Ohne Cache: zwei aufeinanderfolgende Actions
-t0 = time.time(); _ = df_jan.select("trip_distance").agg(F.avg("trip_distance")).collect(); t1 = time.time()
-t2 = time.time(); _ = df_jan.select("fare_amount").agg(F.avg("fare_amount")).collect(); t3 = time.time()
+t0 = time.time(); _ = df_taxi.select("trip_distance").agg(F.avg("trip_distance")).collect(); t1 = time.time()
+t2 = time.time(); _ = df_taxi.select("fare_amount").agg(F.avg("fare_amount")).collect(); t3 = time.time()
 print(f"Ohne Cache: avg(dist) {round(t1-t0,2)}s, avg(fare) {round(t3-t2,2)}s")
 
 # Mit Cache
-df_jan_cached = df_jan.cache()
-_ = df_jan_cached.count()  # Materialisierung
+df_taxi_cached = df_taxi.cache()
+_ = df_taxi_cached.count()  # Materialisierung
 
-t4 = time.time(); _ = df_jan_cached.select("trip_distance").agg(F.avg("trip_distance")).collect(); t5 = time.time()
-t6 = time.time(); _ = df_jan_cached.select("fare_amount").agg(F.avg("fare_amount")).collect(); t7 = time.time()
+t4 = time.time(); _ = df_taxi_cached.select("trip_distance").agg(F.avg("trip_distance")).collect(); t5 = time.time()
+t6 = time.time(); _ = df_taxi_cached.select("fare_amount").agg(F.avg("fare_amount")).collect(); t7 = time.time()
 print(f"Mit Cache:   avg(dist) {round(t5-t4,2)}s, avg(fare) {round(t7-t6,2)}s")
 
-df_jan_cached.unpersist()
+df_taxi_cached.unpersist()
 
 # COMMAND ----------
 
@@ -132,7 +134,7 @@ partitioned_table = (
 # Name der Zieltabelle
 table_name = "yellow_partitioned_taxi"
 
-# Falls die Tabelle schon existiert -> droppen (idempotent)
+# Falls die Tabelle schon existiert -> droppen
 spark.sql(f"DROP TABLE IF EXISTS {table_name}")
 
 # Partitioniert in Metastore-Tabelle schreiben
@@ -228,25 +230,23 @@ print(f"Salted Join Count: {salted_count}, Dauer: {end - start:.2f} Sekunden")
 # COMMAND ----------
 
 # Broadcast-Join mit Taxi-Zonen-Lookup
-lookup_df = spark.read.table(LOOKUP_PATH)\
-                 .withColumnRenamed("LocationID","PULocationID")
-df_bcast = df_taxi.join(broadcast(lookup_df), on="PULocationID", how="left")
+df_lookup = df_lookup.withColumnRenamed("LocationID","PULocationID")
+df_bcast = df_taxi.join(broadcast(df_lookup), on="PULocationID", how="left")
 
-print("Broadcast-Join Plan:")
-df_bcast.explain("formatted")
+#print("Broadcast-Join Plan:")
+#df_bcast.explain("formatted")
 
-# --- SparkContext Broadcast & Accumulator (RDD/foreach)
-bc_threshold = spark.sparkContext.broadcast(1.0)  # z.B. Kurzstrecken-Schwelle
-acc_short = spark.sparkContext.accumulator(0)
+df_bcast.select("PULocationID", "Zone", "Borough", "trip_distance") \
+    .show(10, truncate=False)
 
-def count_short(row):
-    global acc_short
-    if row.trip_distance is not None and row.trip_distance < bc_threshold.value:
-        acc_short += 1
+# COMMAND ----------
 
-# Achtung: foreach löst Job aus; hier auf kleiner Teilmenge demonstrieren
-df_taxi.limit(500000).select("trip_distance").foreach(count_short)
-print("Gezählte Kurzstrecken (Sample):", acc_short.value)
+#Zeitlicher Vergleich: Normaler Join mit Broadcast Join
+
+from time import time
+
+### YOUR CODE HERE ###
+
 
 # COMMAND ----------
 
