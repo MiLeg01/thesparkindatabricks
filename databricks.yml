@@ -1,0 +1,38 @@
+
+bundle:
+  name: theSparkInDatabricks
+  databricks_cli_version: ">= 0.243.0"
+ 
+# Define paths that are uploaded to the Workspace
+sync:
+  paths:
+    - databricks.yml
+    - .
+    - Helper/
+    - Modul 5 - Streaming Pipeline/
+
+# Default Databricks Workspace paths to deploy to
+workspace:
+  root_path: /Workspace/Demo/${bundle.name}
+  artifact_path: ${workspace.root_path}/.artifacts
+  file_path: ${workspace.root_path}/
+  state_path: ${workspace.root_path}/.state
+ 
+presets:
+  name_prefix: "00_DEPLOYMENT_"
+  trigger_pause_status: PAUSED
+  jobs_max_concurrent_runs: 1
+ 
+
+targets:
+  dev:
+    # In development mode, workflows are prepended with DEV_<username>
+    mode: production
+    default: true
+    presets:
+      name_prefix: "DEV_${workspace.current_user.short_name}_"
+      trigger_pause_status: PAUSED
+      jobs_max_concurrent_runs: 1
+    workspace:
+      host: https://dbc-4148ac6e-bd91.cloud.databricks.com
+ 
