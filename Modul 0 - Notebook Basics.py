@@ -13,6 +13,15 @@
 # COMMAND ----------
 
 # MAGIC %md
+# MAGIC #Prerequisits
+# MAGIC
+# MAGIC - Databricks Account
+# MAGIC - Git Repository anbinden
+# MAGIC - Daten hochladen
+
+# COMMAND ----------
+
+# MAGIC %md
 # MAGIC
 # MAGIC # Notebook & Databricks Basics
 # MAGIC

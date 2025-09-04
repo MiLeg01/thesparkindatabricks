@@ -13,6 +13,9 @@
 import dlt
 from pyspark.sql.functions import avg, count
 
+CATALOG = spark.conf.get("CATALOG")
+SCHEMA = spark.conf.get("SCHEMA")
+
 #input_path = "workspace.streaming_input.inputtable"
 STREAMING_INPUT_FOLDER = f"/Volumes/{CATALOG}/{SCHEMA}/taxi_volume/jsonfolder"
 
