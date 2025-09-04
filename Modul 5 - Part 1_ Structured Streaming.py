@@ -15,7 +15,10 @@
 
 STREAMING_INPUT_FOLDER = f"/Volumes/{CATALOG}/{SCHEMA}/taxi_volume/jsonfolder"
 
-spark.sql(f"DROP VOLUME {CATALOG}.{SCHEMA}.taxi_streaming_output;")
+try:
+    spark.sql(f"DROP VOLUME {CATALOG}.{SCHEMA}.taxi_streaming_output;")
+except Exception as e:
+    print("Volume konnte nicht gelöscht werden")
 spark.sql(f"CREATE VOLUME IF NOT EXISTS {CATALOG}.{SCHEMA}.taxi_streaming_output;")
 
 STREAMING_OUTPUT_VOLUME = f"/Volumes/{CATALOG}/{SCHEMA}/taxi_streaming_output"
