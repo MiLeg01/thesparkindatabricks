@@ -69,6 +69,26 @@ print("Zeilen:", n, "  Dauer (s):", round(t1 - t0, 2))
 
 # COMMAND ----------
 
+#Ausführungsplan in allen möglichen Varianten
+
+# Einfacher physischer Plan
+#df_long.explain("simple")
+
+# Logischer + physischer Plan
+#df_long.explain("extended")
+
+# Codegen-Plan anzeigen
+#df_long.explain("codegen")
+
+# Kostenplan
+#df_long.explain("cost")
+
+# Formatierter Plan
+#df_long.explain("formatted")
+
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC ## 3.3. Caching- & Persistenzstrategien
 # MAGIC
