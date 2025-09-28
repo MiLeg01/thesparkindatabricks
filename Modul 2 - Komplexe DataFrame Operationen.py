@@ -35,7 +35,7 @@
 #https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2025-01.parquet
 #https://d37ci6vzurychx.cloudfront.net/misc/taxi_zone_lookup.csv
 
-# Daten zuerst in DBFS hochladen
+# DBFS Pfad
 DATA_PATH = f"{CATALOG}.{SCHEMA}.yellow_tripdata_2025_01"
 LOOKUP_PATH = f"{CATALOG}.{SCHEMA}.taxi_zone_lookup"
 
