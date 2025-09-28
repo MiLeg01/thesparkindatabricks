@@ -431,3 +431,108 @@ df_mit_tip_kategorie = df_taxi.withColumn(
 
 df_mit_tip_kategorie.select("fare_amount", "tip_amount", "tip_kategorie").show(10)
 
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## 2.11. Stores Procedures
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC Stored Procedures sind wiederverwendbare Bausteine, die Logik in einer Datenbank kapseln – vergleichbar mit Funktionen in Programmiersprachen.  
+# MAGIC Sie bieten folgende Vorteile:
+# MAGIC
+# MAGIC - **Wiederverwendbarkeit:** Einmal geschrieben, können sie mehrfach ausgeführt werden.  
+# MAGIC - **Wartbarkeit:** Änderungen an der Logik erfolgen zentral.  
+# MAGIC - **Sicherheit:** Zugriff auf sensible Operationen kann über Berechtigungen auf Prozeduren statt auf Tabellen gesteuert werden.  
+# MAGIC - **Automatisierung:** Häufig wiederkehrende Analysen oder Transformationsschritte können einfach automatisiert werden.  
+# MAGIC
+# MAGIC In Databricks lassen sich Stored Procedures mit **SQL** definieren und sowohl mit SQL- als auch mit PySpark-Workloads kombinieren.
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### Table-Valued Functions (TVFs) vs. Stored Procedures – Theorie
+# MAGIC
+# MAGIC Sowohl **TVFs** (Table-Valued Functions) als auch **Stored Procedures** können Tabellen zurückgeben, unterscheiden sich aber deutlich in **Zweck, Funktionsweise und Einsatz**.
+# MAGIC
+# MAGIC ---
+# MAGIC
+# MAGIC #### Direktvergleich: TVFs vs. Stored Procedures
+# MAGIC
+# MAGIC | Thema | **Table-Valued Functions (TVFs)** | **Stored Procedures** |
+# MAGIC |-------|------------------------------------|------------------------|
+# MAGIC | **Definition** | Parametrisierte Views: wiederverwendbare SQL-Abfrage, die immer eine Tabelle zurückgibt. | Ein gespeichertes Programm in der Datenbank, das mehrere SQL-Befehle und Logik kapselt. |
+# MAGIC | **Rückgabe** | Immer genau eine Tabelle (ähnlich einer View). | Kann eine Tabelle, einzelne Werte oder gar nichts zurückgeben. |
+# MAGIC | **Aufruf** | Wird wie eine Tabelle in einem `SELECT` genutzt: `SELECT * FROM f(parameter)`. | Mit `CALL procedure(parameter)` aufgerufen. |
+# MAGIC | **Komplexität** | Einfach: nur eine Abfrage, keine Mehrschritt-Logik. | Sehr flexibel: mehrere SQL-Statements, Kontrollstrukturen, dynamisches SQL. |
+# MAGIC | **Seiteneffekte** | Keine Datenänderungen möglich. | Kann Daten verändern (INSERT, UPDATE, DELETE). |
+# MAGIC | **Performance** | Optimierbar wie Views; Query Planner kann TVFs gut optimieren. | Schwerer optimierbar, da komplexe Logik enthalten sein kann. |
+# MAGIC | **Typischer Einsatz** | Wiederverwendbare Filter- oder Auswahlabfragen. | ETL-Prozesse, komplexe Transformationen, Automatisierungen. |
+# MAGIC
+# MAGIC ---
+# MAGIC
+# MAGIC #### Zusammenfassung
+# MAGIC
+# MAGIC - **TVFs**  
+# MAGIC   - Funktioniert wie eine **parametrisierte View**.  
+# MAGIC   - Gibt immer eine Tabelle zurück.  
+# MAGIC   - Keine Seiteneffekte, deterministisch, leichtgewichtig.  
+# MAGIC   - Ideal für wiederholte, parametrische Abfragen.  
+# MAGIC
+# MAGIC - **Stored Procedures**  
+# MAGIC   - Funktioniert wie ein **SQL-Programm**.  
+# MAGIC   - Kann Tabellen zurückgeben, Daten verändern oder Workflows steuern.  
+# MAGIC   - Unterstützt komplexe Logik und mehrere Schritte.  
+# MAGIC   - Ideal für ETL, Automatisierung und aggregierte Workflows.
+# MAGIC
+# MAGIC ---
+# MAGIC
+# MAGIC **Merksatz:**  
+# MAGIC - TVFs = **Views mit Parametern** → leichtgewichtig, nur SELECT.  
+# MAGIC - Stored Procedures = **Programme in SQL** → mächtig, flexibel, Workflows & Datenänderungen möglich.
+# MAGIC
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC CREATE DATABASE IF NOT EXISTS taxi_analytics;
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC CREATE OR REPLACE PROCEDURE sp_avg_trip_stats_daily (IN day_of_month STRING)
+# MAGIC LANGUAGE SQL
+# MAGIC SQL SECURITY INVOKER
+# MAGIC AS
+# MAGIC BEGIN
+# MAGIC   SELECT 
+# MAGIC       date(t.tpep_pickup_datetime) AS trip_date,
+# MAGIC       z.Zone AS pickup_zone,
+# MAGIC       ROUND(AVG(unix_timestamp(t.tpep_dropoff_datetime) - unix_timestamp(t.tpep_pickup_datetime)) / 60, 2) AS avg_trip_minutes,
+# MAGIC       ROUND(AVG(t.total_amount), 2) AS avg_total_amount,
+# MAGIC       COUNT(*) AS trip_count
+# MAGIC     FROM default.yellow_tripdata_2025_01 t
+# MAGIC     JOIN default.taxi_zone_lookup z
+# MAGIC       ON t.PULocationID = z.LocationID
+# MAGIC     WHERE date(t.tpep_pickup_datetime) = day_of_month
+# MAGIC     GROUP BY trip_date, z.Zone
+# MAGIC     ORDER BY trip_date ASC, avg_total_amount DESC;
+# MAGIC END;
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC Error! Lösung? **SQL Editor**
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC CALL workspace.taxi_analytics.sp_avg_trip_stats_daily(('2025-01-28'));
+
+# COMMAND ----------
+
+#Übung: 
+# 
+# Schreibe die Stored Procedure so um, dass die Daten persistiert werden. Es sollen dabei für einen Tag aber keine doppelten Einträge vorhanden sein. D.h. wenn es schon Daten für einen gegebenen Tag gibt, sollen die vorher gelöscht werden!
