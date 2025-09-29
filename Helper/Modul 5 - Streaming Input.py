@@ -11,6 +11,12 @@ LOOKUP_PATH = f"{CATALOG}.{SCHEMA}.taxi_zone_lookup"
 df_taxi = spark.read.table(DATA_PATH)
 df_lookup = spark.read.table(LOOKUP_PATH)
 
+try:
+    spark.sql(f"DROP VOLUME {CATALOG}.{SCHEMA}.taxi_volume;")
+except Exception as e:
+    print("Volume konnte nicht gelöscht werden")
+    
+spark.sql(f"CREATE VOLUME IF NOT EXISTS {CATALOG}.{SCHEMA}.taxi_volume;")
 
 # COMMAND ----------
 

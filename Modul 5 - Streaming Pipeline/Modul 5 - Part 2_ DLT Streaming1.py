@@ -31,7 +31,7 @@ schema = StructType([
 ])
 
 # Read from your source table
-@dlt.table(
+@dlt.view(
     comment="Raw streaming trips data"
 )
 def raw_trips_table():
@@ -40,6 +40,8 @@ def raw_trips_table():
              .schema(schema)
              .format("json")
              .load(STREAMING_INPUT_FOLDER)
+             .withColumn("pickup_datetime", to_timestamp(col("pickup_datetime")))
+             .withColumn("dropoff_datetime", to_timestamp(col("dropoff_datetime")))
     )
 
 # Aggregate trips by passenger_count
@@ -48,7 +50,8 @@ def raw_trips_table():
 )
 def trips_by_passenger_count():
     return (
-        spark.read.table("raw_trips_table")
+        dlt.readStream("raw_trips_table")
+           .withWatermark("pickup_datetime", "10 minutes")
            .groupBy("passenger_count")
            .agg(
                count("*").alias("trip_count"),
