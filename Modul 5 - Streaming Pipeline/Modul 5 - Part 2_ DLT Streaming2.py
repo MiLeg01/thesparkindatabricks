@@ -6,7 +6,7 @@
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## 5.6. DLT Pipeline definiert
+# MAGIC ## 5.7. DLT Pipeline Übung
 
 # COMMAND ----------
 
@@ -21,48 +21,31 @@ STREAMING_INPUT_FOLDER = f"/Volumes/{CATALOG}/{SCHEMA}/taxi_volume/jsonfolder"
 
 # Define schema
 schema = StructType([
-    StructField("ride_id", StringType(), True),
-    StructField("taxi_id", StringType(), True),
+    StructField("VendorID", StringType(), True),
     StructField("passenger_count", IntegerType(), True),
     StructField("trip_distance", DoubleType(), True),
     StructField("fare_amount", DoubleType(), True),
-    StructField("pickup_datetime", StringType(), True),
-    StructField("dropoff_datetime", StringType(), True)
+    StructField("tpep_pickup_datetime", StringType(), True),
+    StructField("tpep_dropoff_datetime", StringType(), True)
 ])
 
 # Raw streaming view
-@dlt.view(comment="Raw streaming trips data")
-def raw_trips_table():
+@dlt.table(comment="Raw streaming trips data")
+def raw_trips_table_hourly():
     return (
         spark.readStream
              .schema(schema)
              .format("json")
              .load(STREAMING_INPUT_FOLDER)
-             .withColumn("pickup_datetime", to_timestamp(col("pickup_datetime")))
+             .withColumn("pickup_datetime", to_timestamp(col("tpep_pickup_datetime")))
     )
 
 # Hourly aggregation table
 @dlt.table(comment="Aggregated trip count and average fare per passenger count per hour")
 def trips_by_passenger_count_hourly():
     return (
-        dlt.read_stream("raw_trips_table")
-           # Wait up to 1 hour for late data
-           .withWatermark("pickup_datetime", "1 hour")
-           .groupBy(
-               window(col("pickup_datetime"), "1 hour"),  # 1-hour window
-               col("passenger_count")
-           )
-           .agg(
-               count("*").alias("trip_count"),
-               avg("fare_amount").alias("avg_fare")
-           )
-           # Flatten the window columns for easier querying
-           .select(
-               col("window.start").alias("window_start"),
-               col("window.end").alias("window_end"),
-               col("passenger_count"),
-               col("trip_count"),
-               col("avg_fare")
-           )
+        dlt.read_stream("raw_trips_table_hourly")
+           # Übung
+           # Aggregation auf stündlicher Basis
     )
 
