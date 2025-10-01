@@ -8,16 +8,16 @@ LOOKUP_PATH = f"{CATALOG}.{SCHEMA}.taxi_zone_lookup"
 def test_tripdata_schema(spark):
     df_taxi = spark.read.table(DATA_PATH)
     expected_fields = {
-        "VendorID": "string",
+        "VendorID": "int",
         "tpep_pickup_datetime": "timestamp",
         "tpep_dropoff_datetime": "timestamp",
-        "passenger_count": "double",
+        "passenger_count": "bigint",
         "trip_distance": "double",
-        "RatecodeID": "double",
+        "RatecodeID": "bigint",
         "store_and_fwd_flag": "string",
         "PULocationID": "int",
         "DOLocationID": "int",
-        "payment_type": "double",
+        "payment_type": "bigint",
         "fare_amount": "double",
         "extra": "double",
         "mta_tax": "double",
@@ -25,7 +25,9 @@ def test_tripdata_schema(spark):
         "tolls_amount": "double",
         "improvement_surcharge": "double",
         "total_amount": "double",
-        "congestion_surcharge": "double"
+        "congestion_surcharge": "double",
+        "Airport_fee": "double",
+        "cbd_congestion_fee": "double"
     }
     for field in df_taxi.schema.fields:
         assert field.name in expected_fields, f"{field.name} not in expected fields"

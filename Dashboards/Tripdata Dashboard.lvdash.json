@@ -1,0 +1,73 @@
+{
+  "datasets": [
+    {
+      "name": "adec4aec",
+      "displayName": "yellow_tripdata_2025_01",
+      "queryLines": [
+        "SELECT * FROM workspace.default.yellow_tripdata_2025_01 LIMIT 100000"
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "18df2731",
+      "displayName": "Page1",
+      "layout": [
+        {
+          "widget": {
+            "name": "c3e78be0",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "adec4aec",
+                  "fields": [
+                    {
+                      "name": "trip_distance",
+                      "expression": "`trip_distance`"
+                    },
+                    {
+                      "name": "avg(fare_amount)",
+                      "expression": "AVG(`fare_amount`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "trip_distance",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "fieldName": "avg(fare_amount)",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 1,
+            "y": 1,
+            "width": 3,
+            "height": 6
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS"
+    }
+  ],
+  "uiSettings": {
+    "theme": {
+      "widgetHeaderAlignment": "ALIGNMENT_UNSPECIFIED"
+    }
+  }
+}
