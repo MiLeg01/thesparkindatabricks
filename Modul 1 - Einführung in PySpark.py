@@ -32,8 +32,11 @@
 
 # COMMAND ----------
 
+# MAGIC
 # MAGIC %md
 # MAGIC ### 1.1.2. Cluster-Architektur von Spark
+# MAGIC
+# MAGIC ![](/Workspace/Users/michael.legenstein@accenture.com/thesparkindatabricks/Helper/Images/sparkcluster-overview.png)
 # MAGIC
 # MAGIC Spark arbeitet verteilt auf einem Cluster. Die wichtigsten Komponenten:
 # MAGIC
@@ -46,8 +49,24 @@
 # MAGIC   - Maschinen im Cluster, auf denen Executor-Prozesse laufen
 # MAGIC - **Executors**:
 # MAGIC   - Führen die Tasks auf den Worker Nodes aus
-# MAGIC   - Jeder Executor verwaltet einen Teil des Arbeitsspeichers und der CPU-Kerne
-# MAGIC
+# MAGIC   - Jeder Executor verwaltet einen Teil des Arbeitsspeichers (Cache) und der CPU-Kerne
+# MAGIC - **Spark Context**:
+# MAGIC   - Der SparkContext ist ein Objekt, das die Verbindung zwischen deiner Anwendung (Driver) und dem Spark-Cluster herstellt.
+# MAGIC   - Er ist die Hauptschnittstelle, über die der Driver Jobs an Spark übergibt.
+# MAGIC   - In neueren Spark-Versionen wird oft SparkSession genutzt.
+# MAGIC Er ist die Hauptschnittstelle, über die der Driver Jobs an Spark übergibt.
+# MAGIC - **Job**:
+# MAGIC   - Entsteht durch eine Aktion (count(), collect(), save()).
+# MAGIC   - Wird vom Driver erstellt und koordiniert.
+# MAGIC   - Ein Job kann mehrere Stages enthalten.
+# MAGIC - **Stage**:
+# MAGIC   - Unterteilung des Jobs in parallel ausführbare Schritte.
+# MAGIC   - Abhängig von Narrow/Wide Dependencies der Transformationen.
+# MAGIC   - Jede Stage besteht aus Tasks, die auf Datenpartitionen ausgeführt werden.
+# MAGIC - **Task**:
+# MAGIC   - Kleinste Arbeitseinheit in Spark.
+# MAGIC   - Führt Operationen auf einer einzelnen Datenpartition aus.
+# MAGIC   - Wird vom Driver geplant und einem Executor zugewiesen.
 
 # COMMAND ----------
 
