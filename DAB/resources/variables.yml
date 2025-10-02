@@ -1,0 +1,7 @@
+variables:
+  catalog:
+    description: "Unity Catalog name"
+    default: "x"
+  schema:
+    description: "Schema name"
+    default: "default"

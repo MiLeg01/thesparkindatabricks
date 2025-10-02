@@ -1,0 +1,46 @@
+# This is a Databricks asset bundle definition for myassetbundle1.
+# See https://docs.databricks.com/dev-tools/bundles/index.html for documentation.
+bundle:
+  name: myassetbundle1
+  uuid: c575be8e-bfb9-42e1-8f9e-d73aaff05035
+
+include:
+  - resources/*.yml
+  - resources/*/*.yml
+
+targets:
+  dev:
+    # The default target uses 'mode: development' to create a development copy.
+    # - Deployed resources get prefixed with '[dev my_user_name]'
+    # - Any job schedules and triggers are paused by default.
+    # See also https://docs.databricks.com/dev-tools/bundles/deployment-modes.html.
+    mode: development
+    default: true
+    workspace:
+      host: https://dbc-96936b6e-01f2.cloud.databricks.com
+
+  prod:
+    mode: production
+    workspace:
+      host: https://dbc-96936b6e-01f2.cloud.databricks.com
+      # We explicitly deploy to /Workspace/Users/michael.legenstein@accenture.com to make sure we only have a single copy.
+      root_path: /Workspace/Users/michael.legenstein@accenture.com/.bundle/${bundle.name}/${bundle.target}
+    permissions:
+      - user_name: michael.legenstein@accenture.com
+        level: CAN_MANAGE
+    run_as:
+      service_principal_name: '68ed9cd5-8923-4851-x0c1-c7536c67ff99'
+
+resources:
+  jobs:
+    etl_job:
+      name: "Kapitel 7 ETL Job"
+      tasks:
+        - task_key: run_etl
+          spark_python_task:
+            python_file: src/df_operations.py
+          environment_key: Default
+      environments:
+        - environment_key: Default
+          spec:
+            client: "3"
