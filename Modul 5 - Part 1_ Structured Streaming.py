@@ -117,5 +117,5 @@ query = (
 # COMMAND ----------
 
 # MAGIC %sql
-# MAGIC SELECT * 
-# MAGIC FROM delta.`/Volumes/workspace/default/taxi_streaming_output/streamingdata`
+# MAGIC SELECT *
+# MAGIC FROM delta.`/Volumes/{CATALOG}/{SCHEMA}/taxi_streaming_output/streamingdata`

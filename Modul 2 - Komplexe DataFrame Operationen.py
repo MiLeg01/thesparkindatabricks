@@ -71,7 +71,7 @@ df_taxi.describe("trip_distance").show()
 # Filter 
 long_trips = df_taxi.filter(df_taxi.trip_distance > 10)
 short_long_trips = df_taxi.filter((df_taxi.trip_distance > 10) | (df_taxi.trip_distance < 1))
-
+display(short_long_trips)
 
 # COMMAND ----------
 
@@ -113,7 +113,7 @@ display(df_transformed)
 
 # COMMAND ----------
 
-from pyspark.sql.functions import avg, count
+from pyspark.sql.functions import avg, count, expr
 
 # Durchschnittliche Entfernung und Fahrpreis pro Tag
 df_gruppiert = df_taxi.groupBy(expr("date(tpep_pickup_datetime)").alias("fahrt_datum")) \
@@ -124,7 +124,8 @@ df_gruppiert = df_taxi.groupBy(expr("date(tpep_pickup_datetime)").alias("fahrt_d
     ) \
     .orderBy("fahrt_datum")
 
-display(df_gruppiert)
+df_gruppiert.explain("extended")
+#display(df_gruppiert)
 
 
 # COMMAND ----------
@@ -146,7 +147,7 @@ display(df_gruppiert)
 # COMMAND ----------
 
 from pyspark.sql.window import Window
-from pyspark.sql.functions import rank, desc, to_date
+from pyspark.sql.functions import rank, desc, to_date, col
 
 #Pro Tag die drei Fahrten mit der größten trip_distance und zeigt deren Abholzeit, Distanz und Rang an.
 w = Window.partitionBy(to_date("tpep_pickup_datetime")).orderBy(desc("trip_distance"))
@@ -277,7 +278,7 @@ from pyspark.sql.functions import udf
 from pyspark.sql.types import StringType
 
 # Beispiel: UDF zur Klassifikation der Fahrten basierend auf Entfernung
-def fahrten_kategorie(entfernung):
+def fahrten_kategorie(entfernung: int):
     if entfernung < 1:
         return "Kurz"
     elif entfernung < 5:
@@ -293,6 +294,21 @@ df_mit_kategorie = df_taxi.withColumn("fahrt_kategorie", kategorie_udf(col("trip
 
 display(df_mit_kategorie.select("trip_distance", "fahrt_kategorie"))
 
+
+# COMMAND ----------
+
+from pyspark.sql.functions import when, col
+ 
+df_mit_kategorie = df_taxi.withColumn(
+    "fahrt_kategorie",
+    when(col("trip_distance") < 1, "Kurz")
+    .when(col("trip_distance") < 5, "Mittel")
+    .otherwise("Lang")
+)
+ 
+display(
+    df_mit_kategorie.select("trip_distance", "fahrt_kategorie")
+)
 
 # COMMAND ----------
 

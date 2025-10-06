@@ -94,7 +94,7 @@
 # MAGIC databricks bundle validate
 # MAGIC ```
 # MAGIC
-# MAGIC **Deployen:**
+# MAGIC **Deploy:**
 # MAGIC ```sh
 # MAGIC databricks bundle deploy
 # MAGIC ```
@@ -103,15 +103,16 @@
 # MAGIC ```sh
 # MAGIC databricks bundle run -t dev etl_job
 # MAGIC ```
-# MAGIC
 
 # COMMAND ----------
 
 # MAGIC %md
 # MAGIC ## 8. Erzeuge einen Service Principal
 # MAGIC
-# MAGIC - Service Principal in der Admin-Konsole erzeugen
-# MAGIC - Service Principal berechtigen
+# MAGIC 1. Service Principal in der Admin-Konsole erzeugen
+# MAGIC 2. Service Principal berechtigen
+# MAGIC 3. Den eigenen User auf den Service Principial mit Permissions "User" berechtigen:
+# MAGIC ![](./Helper/Images/dab-userberechtigung.png)
 
 # COMMAND ----------
 
@@ -124,14 +125,12 @@
 # MAGIC   presets:
 # MAGIC     name_prefix: "[prod SP]"
 # MAGIC   workspace:
-# MAGIC     host: https://...
+# MAGIC     host: <workspace-url>
 # MAGIC     root_path: /Workspace/Shared/.bundle/${bundle.name}/${bundle.target}
 # MAGIC   run_as:
-# MAGIC     service_principal_name: tbd
+# MAGIC     service_principal_name: <Principal-ID>
 # MAGIC   permissions:
-# MAGIC     - user_name: tbd
-# MAGIC       level: CAN_MANAGE
-# MAGIC     - group_name: admins
+# MAGIC     - user_name: <Eigene Mailadresse>
 # MAGIC       level: CAN_MANAGE
 # MAGIC ```
 # MAGIC
@@ -139,9 +138,17 @@
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## 12. Run Production Deployment
-# MAGIC >             
+# MAGIC ## 12. Production Deployment & Run
+# MAGIC
+# MAGIC **Deploy:**   
 # MAGIC ```sh
 # MAGIC databricks bundle deploy -t prod
 # MAGIC ```
+# MAGIC
+# MAGIC **Run\*:**
+# MAGIC ```sh
+# MAGIC databricks bundle run -t dev etl_job
+# MAGIC ```
+# MAGIC
+# MAGIC *Wichtig für den Run ist, dass der Service Principal auf alle betroffenen Elemente entsprechend berechtigt ist
 # MAGIC

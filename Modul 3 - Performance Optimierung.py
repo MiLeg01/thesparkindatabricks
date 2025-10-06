@@ -78,7 +78,7 @@ print("Zeilen:", n, "  Dauer (s):", round(t1 - t0, 2))
 #df_long.explain("extended")
 
 # Codegen-Plan anzeigen
-#df_long.explain("codegen")
+df_long.explain("codegen")
 
 # Kostenplan
 #df_long.explain("cost")
@@ -162,11 +162,22 @@ partitioned_table.write.mode("overwrite").partitionBy("year", "month").saveAsTab
 
 print(f"Tabelle geschrieben nach: {table_name}")
 
+# Name der Zieltabelle
+table_name = "yellow_partitioned_taxi2"
+
+# Falls die Tabelle schon existiert -> droppen
+spark.sql(f"DROP TABLE IF EXISTS {table_name}")
+
+# Partitioniert in Metastore-Tabelle schreiben
+partitioned_table.write.mode("overwrite").clusterBy("year", "month").saveAsTable(table_name)
+
+print(f"Tabelle geschrieben nach: {table_name}")
+
 
 # COMMAND ----------
 
 # MAGIC %sql
-# MAGIC DESCRIBE EXTENDED default.yellow_partitioned_taxi
+# MAGIC DESCRIBE EXTENDED default.yellow_partitioned_taxi2
 # MAGIC
 
 # COMMAND ----------
@@ -184,7 +195,7 @@ print("Explain ohne Filter:")
 df_part.select("trip_distance").explain("formatted")
 
 print("\nExplain mit Filter (year=2016, month=1):")
-df_pruned = df_part.filter((col("year")==2016) & (col("month")==1))
+df_pruned = df_part.filter((col("year")==2025) & (col("month")==1))
 df_pruned.select("trip_distance").explain("formatted")
 
 # COMMAND ----------

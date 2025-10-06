@@ -6,9 +6,7 @@
 
 # MAGIC %md
 # MAGIC
-# MAGIC https://www.menti.com/aldhq2dr1ua6
-# MAGIC
-# MAGIC ![](./Helper/mentimeter_qr_code.png)
+# MAGIC https://www.menti.com/alryeec3j2wq
 
 # COMMAND ----------
 

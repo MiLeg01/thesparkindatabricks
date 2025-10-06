@@ -262,7 +262,10 @@ df.createOrReplaceTempView("personen")
 # COMMAND ----------
 
 # MAGIC %sql
-# MAGIC select * from personen
+# MAGIC
+# MAGIC select * from personen;
+# MAGIC
+# MAGIC select count(*) from personen
 
 # COMMAND ----------
 
