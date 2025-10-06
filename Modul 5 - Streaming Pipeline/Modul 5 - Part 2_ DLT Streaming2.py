@@ -40,12 +40,24 @@ def raw_trips_table_hourly():
              .withColumn("pickup_datetime", to_timestamp(col("tpep_pickup_datetime")))
     )
 
-# Hourly aggregation table
 @dlt.table(comment="Aggregated trip count and average fare per passenger count per hour")
 def trips_by_passenger_count_hourly():
     return (
         dlt.read_stream("raw_trips_table_hourly")
-           # Übung
-           # Aggregation auf stündlicher Basis
+           .groupBy(
+               window(col("pickup_datetime"), "1 hour"),
+               col("passenger_count")
+           )
+           .agg(
+               count("*").alias("trip_count"),
+               avg("fare_amount").alias("avg_fare")
+           )
+           .select(
+               col("window.start").alias("window_start"),
+               col("window.end").alias("window_end"),
+               col("passenger_count"),
+               col("trip_count"),
+               col("avg_fare")
+           )
     )
 
