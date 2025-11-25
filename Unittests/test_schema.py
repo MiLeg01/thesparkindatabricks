@@ -45,6 +45,12 @@ def test_zone_lookup_schema(spark):
         assert field.name in expected_fields, f"{field.name} not in expected fields"
         assert field.dataType.simpleString() == expected_fields[field.name], f"Type mismatch for {field.name}"
 
+def test_distances_non_negative(spark):
+
+    #ToDo: Test der überprüft ob trip_distance nicht-negativ ist
+
+    return None
+
 if __name__ == "__main__":
     test_tripdata_schema(spark)
     test_zone_lookup_schema(spark)

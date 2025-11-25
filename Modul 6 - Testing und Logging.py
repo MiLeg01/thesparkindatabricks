@@ -65,11 +65,11 @@ df_lookup = spark.read.table(LOOKUP_PATH)
 # MAGIC   - Unterstützt Test Suites, Setup/Teardown-Methoden
 # MAGIC   - Gut dokumentiert
 # MAGIC - **Schwächen:**
-# MAGIC   - Syntax ist etwas verbose
+# MAGIC   - Syntax ist etwas umständlich
 # MAGIC   - Flexibilität im Vergleich zu pytest eingeschränkt
 # MAGIC - **Einsatz in PySpark:**
 # MAGIC   - Gut für strukturierte, kleine Tests
-# MAGIC   - Tests von DataFrame-Transformationen sind möglich, aber Assertions müssen manuell gemacht werden (z. B. `assert df.collect() == expected_data`)
+# MAGIC   - Tests von DataFrame-Transformationen sind möglich, aber Assertions müssen manuell gemacht werden (z. B. `assert df.collect() == expected_data`) - Achtung auf Lazy Evaluation hier
 # MAGIC
 
 # COMMAND ----------
@@ -135,6 +135,10 @@ df_lookup = spark.read.table(LOOKUP_PATH)
 
 # COMMAND ----------
 
+# MAGIC %pip install pytest
+
+# COMMAND ----------
+
 #Schema Tests definieren
 import pytest
 
@@ -176,6 +180,7 @@ def test_zone_lookup_schema():
 ## Schema Tests ausführen
 
 !pytest -v --assert=plain
+
 
 # COMMAND ----------
 
