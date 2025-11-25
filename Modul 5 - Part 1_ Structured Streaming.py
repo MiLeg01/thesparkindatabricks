@@ -53,29 +53,19 @@ from pyspark.sql.types import StructType, StructField, StringType, IntegerType, 
 
 # Define schema (important for streaming)
 schema = StructType([
-    StructField("ride_id", StringType(), True),
-    StructField("taxi_id", StringType(), True),
+    StructField("VendorID", StringType(), True),
     StructField("passenger_count", IntegerType(), True),
     StructField("trip_distance", DoubleType(), True),
     StructField("fare_amount", DoubleType(), True),
-    StructField("pickup_datetime", StringType(), True),
-    StructField("dropoff_datetime", StringType(), True)
+    StructField("tpep_pickup_datetime", StringType(), True),
+    StructField("tpep_dropoff_datetime", StringType(), True)
 ])
 
 # Create streaming DataFrame
-df_stream = spark.readStream \
+input_stream = spark.readStream \
     .schema(schema) \
     .json(STREAMING_INPUT_FOLDER)
 
-
-# COMMAND ----------
-
-""" table version
-streaming_df = (
-    spark.readStream
-         .table(input_path)
-)
-"""
 
 # COMMAND ----------
 
@@ -86,8 +76,8 @@ streaming_df = (
 
 from pyspark.sql.functions import avg, count
 
-agg_df = (
-    df_stream
+count_df = (
+    input_stream
         .groupBy("passenger_count")
         .agg(
             count("*").alias("trip_count"),
@@ -98,15 +88,27 @@ agg_df = (
 
 # COMMAND ----------
 
+#ToDO: Aggregation über 1h Fenstern - Durchschnittliche Fahrpreise und Gesamtpreise, Anzahl Fahrten
+
+
+
+
+# COMMAND ----------
+
+
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC ##5.5. Stream schreiben in Zieltabelle 
 
 # COMMAND ----------
 
 query = (
-    agg_df.writeStream
+    input_stream.writeStream
          .queryName("stream_demo")   
-         .outputMode("complete")              # replace results on each trigger
+         #.outputMode("complete")              # replace results on each trigger, other is "update"
+         .outputMode("append")
          .option("checkpointLocation", STREAMING_CHECKPOINT)
          .format("delta")
          .trigger(availableNow=True)
@@ -116,6 +118,9 @@ query = (
 
 # COMMAND ----------
 
-# MAGIC %sql
-# MAGIC SELECT *
-# MAGIC FROM delta.`/Volumes/{CATALOG}/{SCHEMA}/taxi_streaming_output/streamingdata`
+query = f"""
+SELECT *
+FROM delta.`/Volumes/{CATALOG}/{SCHEMA}/taxi_streaming_output/streamingdata`
+"""
+
+display(spark.sql(query))
