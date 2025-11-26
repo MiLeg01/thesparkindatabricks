@@ -6,6 +6,11 @@
 # COMMAND ----------
 
 # MAGIC %md
+# MAGIC https://medium.com/@coderodo/databricks-asset-bundles-the-fundamentals-6dd7d024cd49
+
+# COMMAND ----------
+
+# MAGIC %md
 # MAGIC ## 1. Authentifizierung in der Databricks CLI
 # MAGIC > 
 # MAGIC ```sh
