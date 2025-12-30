@@ -36,7 +36,7 @@
 # MAGIC %md
 # MAGIC ### 1.1.2. Cluster-Architektur von Spark
 # MAGIC
-# MAGIC ![](/Workspace/Users/michael.legenstein@accenture.com/thesparkindatabricks/Helper/Images/sparkcluster-overview.png)
+# MAGIC ![](/Workspace/Users/[Placeholder]/thesparkindatabricks/Helper/Images/sparkcluster-overview.png)
 # MAGIC
 # MAGIC Spark arbeitet verteilt auf einem Cluster. Die wichtigsten Komponenten:
 # MAGIC
